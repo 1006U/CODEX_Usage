@@ -108,8 +108,14 @@ public partial class TaskbarUsageWindow : Window
 
     private static bool TryGetTaskbarRect(out RectNative rect)
     {
+        rect = default;
         var hwnd = FindWindow("Shell_TrayWnd", null);
-        return hwnd != nint.Zero && GetWindowRect(hwnd, out rect);
+        if (hwnd == nint.Zero)
+        {
+            return false;
+        }
+
+        return GetWindowRect(hwnd, out rect);
     }
 
     private static string BuildTooltip(UsageSnapshot snapshot)
