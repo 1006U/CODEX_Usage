@@ -1,0 +1,61 @@
+<Window x:Class="CodexUsageWidget.TaskbarUsageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Codex Usage"
+        Width="154"
+        Height="44"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Focusable="False"
+        MouseLeftButtonUp="Window_MouseLeftButtonUp">
+    <Border CornerRadius="4"
+            Background="#E61A1C20"
+            BorderBrush="#332E3B4B"
+            BorderThickness="1"
+            Padding="10,5"
+            Cursor="Hand">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Width="3"
+                    CornerRadius="2"
+                    Background="#FF42E4CF" />
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="CODEX"
+                               Foreground="#FFE6ECF3"
+                               FontSize="11"
+                               FontWeight="SemiBold" />
+                    <TextBlock x:Name="FiveHourText"
+                               Text="  --%"
+                               Foreground="#FFF8FAFC"
+                               FontSize="11"
+                               FontWeight="Bold" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,0">
+                    <TextBlock Text="5H " Foreground="#FF7D8B9E" FontSize="9" />
+                    <TextBlock x:Name="FiveHourSmallText" Text="--%" Foreground="#FF42E4CF" FontSize="9" FontWeight="SemiBold" />
+                    <TextBlock Text="  ·  WK " Foreground="#FF7D8B9E" FontSize="9" />
+                    <TextBlock x:Name="WeeklyText" Text="--%" Foreground="#FFB19CFF" FontSize="9" FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
