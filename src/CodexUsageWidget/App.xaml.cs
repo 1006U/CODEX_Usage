@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.IO;
 using System.Windows;
 using CodexUsageWidget.Services;
 using Forms = System.Windows.Forms;
@@ -10,6 +11,7 @@ public partial class App : System.Windows.Application
     private MainWindow? _window;
     private TaskbarUsageWindow? _taskbarWindow;
     private Forms.NotifyIcon? _trayIcon;
+    private Icon? _customTrayIcon;
     private Forms.ToolStripMenuItem? _startupMenuItem;
     private bool _isExiting;
     private bool _suppressStartupToggle;
@@ -67,15 +69,29 @@ public partial class App : System.Windows.Application
         exitItem.Click += (_, _) => ExitApplication();
         menu.Items.Add(exitItem);
 
+        _customTrayIcon = LoadCustomTrayIcon();
         _trayIcon = new Forms.NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = _customTrayIcon ?? SystemIcons.Application,
             Text = "Codex Usage Monitor",
             Visible = true,
             ContextMenuStrip = menu
         };
 
         _trayIcon.DoubleClick += (_, _) => ShowWidget();
+    }
+
+    private static Icon? LoadCustomTrayIcon()
+    {
+        try
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CodexUsageMonitor.ico");
+            return File.Exists(iconPath) ? new Icon(iconPath) : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void StartupMenuItem_CheckedChanged(object? sender, EventArgs e)
@@ -132,6 +148,7 @@ public partial class App : System.Windows.Application
 
         _window.Activate();
         _window.Topmost = true;
+        _taskbarWindow?.ForceTopmost();
     }
 
     public void ExitApplication()
@@ -149,6 +166,9 @@ public partial class App : System.Windows.Application
             _trayIcon.Dispose();
             _trayIcon = null;
         }
+
+        _customTrayIcon?.Dispose();
+        _customTrayIcon = null;
 
         if (_taskbarWindow is not null)
         {
@@ -168,6 +188,9 @@ public partial class App : System.Windows.Application
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
         }
+
+        _customTrayIcon?.Dispose();
+        _customTrayIcon = null;
 
         base.OnExit(e);
     }
