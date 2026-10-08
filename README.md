@@ -1,17 +1,55 @@
-# Codex Usage Widget
+# Codex Usage Monitor
 
-Windows desktop widget for monitoring the remaining Codex subscription usage.
+Windows desktop widget for monitoring the remaining Codex subscription usage without opening the ChatGPT/Codex usage screen.
+
+The design is inspired by the workflow of Claude usage widgets: keep a tiny always-on-top monitor visible, poll only usage/rate-limit information, and never send model prompts just to check quota.
 
 ## Features
 
-- Shows remaining **5-hour** Codex usage
-- Shows remaining **weekly (7-day)** Codex usage
-- Shows reset time for each window
-- Refreshes automatically every 60 seconds
-- Manual refresh button
-- Borderless, draggable, always-on-top desktop widget
+- Remaining **5-hour** Codex usage
+- Remaining **weekly (7-day)** Codex usage
+- Live reset countdown for both windows
+- Dark glass-style always-on-top widget
+- Borderless drag-to-move window
+- Manual refresh
+- Automatic sync around once per minute
+- ±10% refresh jitter so multiple clients do not poll at exactly the same instant
+- Exponential retry backoff on failures (1 → 2 → 4 → 8 → 16 minutes)
+- Keeps the last successful values visible if a later refresh fails
 - Uses the locally installed **official Codex CLI app-server**
-- Does **not** read or store `~/.codex/auth.json` directly
+- No Codex model prompt is sent to obtain quota information
+- Does **not** directly parse/store/copy `~/.codex/auth.json`
+
+## Why the implementation differs from Claude usage widgets
+
+A Claude widget can reuse Claude Code's local OAuth credential and call Anthropic's usage endpoint directly. For this Codex monitor we deliberately keep authentication inside the official Codex CLI instead.
+
+The monitor starts:
+
+```text
+codex app-server
+```
+
+and uses its local JSON-RPC interface:
+
+```text
+initialize
+initialized
+account/rateLimits/read
+```
+
+The usage response contains rate-limit windows. The monitor identifies:
+
+- `300` minutes → 5-hour window
+- `10080` minutes → 7-day window
+
+and displays:
+
+```text
+remaining = 100 - usedPercent
+```
+
+This gives the same practical experience as the Claude widget pattern—usage only, no model call—while avoiding a second implementation of Codex login/token handling.
 
 ## Requirements
 
@@ -41,6 +79,14 @@ dotnet run --project .\src\CodexUsageWidget\CodexUsageWidget.csproj
 
 ## Publish a standalone EXE
 
+The repository includes:
+
+```powershell
+.\scripts\publish.ps1
+```
+
+or run manually:
+
 ```powershell
 dotnet publish .\src\CodexUsageWidget\CodexUsageWidget.csproj `
   -c Release `
@@ -49,31 +95,39 @@ dotnet publish .\src\CodexUsageWidget\CodexUsageWidget.csproj `
   -p:PublishSingleFile=true
 ```
 
-Output is created under:
-
-```text
-src\CodexUsageWidget\bin\Release\net8.0-windows\win-x64\publish\
-```
-
-## How usage is read
-
-The widget starts:
-
-```text
-codex app-server
-```
-
-and talks to it over local JSON-RPC/stdin/stdout. It requests `account/rateLimits/read` and identifies the general limits by window duration:
-
-- `300` minutes -> 5-hour limit
-- `10080` minutes -> weekly limit
-
-Remaining percentage is calculated as `100 - usedPercent`.
-
 ## Security
 
-The widget intentionally does not parse, copy, log, or upload your Codex authentication tokens. Authentication remains owned by the installed Codex CLI.
+The application intentionally leaves Codex authentication to the installed Codex CLI. It does not log access tokens and does not need a separate OpenAI login screen.
 
-## Status
+The widget only asks the local Codex app-server for account rate-limit information. The Codex app-server itself performs the authenticated backend request using the account already signed into Codex.
 
-This repository currently contains the first working implementation scaffold. The Codex app-server protocol can evolve, so parsing is deliberately tolerant of additional response fields.
+## Current UI
+
+The main card shows two headline values:
+
+```text
+CODEX Usage Monitor
+
+5시간                 주간
+53%                   61%
+RESET 22:10           RESET 10/15 14:20
+
+5시간 한도                     53% 남음
+███████████░░░░░░░░
+2시간 14분 후 초기화
+
+주간 한도                      61% 남음
+████████████░░░░░░░
+5일 18시간 후 초기화
+
+정상 · 1분 간격 자동 동기화      19:42:10
+```
+
+## Next planned improvements
+
+- System tray icon with 5-hour percentage
+- Start with Windows option
+- Save/restore widget position
+- Configurable low-usage notifications
+- Optional 7-day usage history/sparkline
+- GitHub Actions release build for portable EXE
