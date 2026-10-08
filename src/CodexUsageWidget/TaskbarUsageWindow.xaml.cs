@@ -9,31 +9,37 @@ namespace CodexUsageWidget;
 
 public partial class TaskbarUsageWindow : Window
 {
+    private const int GwlStyle = -16;
     private const int GwlExStyle = -20;
+    private const long WsChild = 0x40000000L;
+    private const long WsPopup = 0x80000000L;
     private const int WsExToolWindow = 0x00000080;
     private const int WsExNoActivate = 0x08000000;
+
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpShowWindow = 0x0040;
-    private static readonly nint HwndTopmost = new(-1);
+    private static readonly nint HwndTop = nint.Zero;
 
     private const double EstimatedWeatherWidth = 190;
     private const double GapNextToWeather = 6;
 
-    private readonly DispatcherTimer _pinTimer;
+    private readonly DispatcherTimer _taskbarTimer;
     private UsageSnapshot? _lastSnapshot;
+    private nint _taskbarHwnd;
 
     public TaskbarUsageWindow()
     {
         InitializeComponent();
 
-        // Windows 11 can briefly repaint the taskbar above overlay windows when another
-        // app receives focus. Reassert the mini widget quickly enough that it no longer
-        // visibly disappears between shell repaints.
-        _pinTimer = new DispatcherTimer(DispatcherPriority.Send)
+        // This window is re-parented into Explorer's Shell_TrayWnd. That makes it behave
+        // like part of the taskbar: when the taskbar is hidden by a fullscreen game/video,
+        // the Codex mini widget is hidden with it instead of floating above the app.
+        // The timer only repairs the attachment after Explorer/taskbar restarts or layout changes.
+        _taskbarTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromMilliseconds(80)
+            Interval = TimeSpan.FromSeconds(1)
         };
-        _pinTimer.Tick += (_, _) =>
+        _taskbarTimer.Tick += (_, _) =>
         {
             if (!IsVisible)
             {
@@ -41,29 +47,24 @@ public partial class TaskbarUsageWindow : Window
             }
 
             RenderMiniUsage();
+            EnsureTaskbarAttachment();
             PositionOnTaskbar();
-            ForceTopmost();
         };
 
-        SourceInitialized += (_, _) => ConfigureNativeWindow();
+        SourceInitialized += (_, _) =>
+        {
+            ConfigureNativeWindow();
+            EnsureTaskbarAttachment();
+        };
+
         Loaded += (_, _) =>
         {
+            EnsureTaskbarAttachment();
             PositionOnTaskbar();
-            ForceTopmost();
-            _pinTimer.Start();
+            _taskbarTimer.Start();
         };
-        IsVisibleChanged += (_, _) =>
-        {
-            if (IsVisible)
-            {
-                Dispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() =>
-                {
-                    PositionOnTaskbar();
-                    ForceTopmost();
-                }));
-            }
-        };
-        Closed += (_, _) => _pinTimer.Stop();
+
+        Closed += (_, _) => _taskbarTimer.Stop();
     }
 
     public void UpdateUsage(UsageSnapshot snapshot)
@@ -72,8 +73,8 @@ public partial class TaskbarUsageWindow : Window
         RenderMiniUsage();
         ToolTip = BuildTooltip(snapshot);
 
+        EnsureTaskbarAttachment();
         PositionOnTaskbar();
-        ForceTopmost();
     }
 
     private void RenderMiniUsage()
@@ -122,48 +123,7 @@ public partial class TaskbarUsageWindow : Window
         return $"RESET {Math.Max(0, remaining.Minutes)}m";
     }
 
-    public void PositionOnTaskbar()
-    {
-        if (!TryGetTaskbarRect(out var taskbarRect))
-        {
-            PositionFallback();
-            return;
-        }
-
-        var source = PresentationSource.FromVisual(this);
-        var dpiX = source?.CompositionTarget?.TransformFromDevice.M11 ?? 1.0;
-        var dpiY = source?.CompositionTarget?.TransformFromDevice.M22 ?? 1.0;
-
-        var taskbarLeft = taskbarRect.Left * dpiX;
-        var taskbarTop = taskbarRect.Top * dpiY;
-        var taskbarRight = taskbarRect.Right * dpiX;
-        var taskbarHeight = (taskbarRect.Bottom - taskbarRect.Top) * dpiY;
-
-        var miniWidth = ActualWidth > 0 ? ActualWidth : Width;
-        double desiredLeft;
-
-        if (TryGetNotificationAreaRect(out var trayRect))
-        {
-            var trayLeft = trayRect.Left * dpiX;
-            desiredLeft = trayLeft - EstimatedWeatherWidth - GapNextToWeather - miniWidth;
-        }
-        else
-        {
-            desiredLeft = taskbarRight - 430 - EstimatedWeatherWidth - GapNextToWeather - miniWidth;
-        }
-
-        var minLeft = taskbarLeft + 4;
-        var maxLeft = Math.Max(minLeft, taskbarRight - miniWidth - 4);
-        Left = Math.Clamp(desiredLeft, minLeft, maxLeft);
-        Top = taskbarTop + Math.Max(0, (taskbarHeight - Height) / 2);
-    }
-
-    public System.Windows.Point GetPopupAnchor()
-    {
-        return new System.Windows.Point(Left, Top);
-    }
-
-    public void ForceTopmost()
+    private void EnsureTaskbarAttachment()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd == nint.Zero)
@@ -171,25 +131,104 @@ public partial class TaskbarUsageWindow : Window
             return;
         }
 
+        var taskbar = FindWindow("Shell_TrayWnd", null);
+        if (taskbar == nint.Zero)
+        {
+            return;
+        }
+
+        if (_taskbarHwnd == taskbar && GetParent(hwnd) == taskbar)
+        {
+            return;
+        }
+
+        _taskbarHwnd = taskbar;
+
+        var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
+        style &= ~WsPopup;
+        style |= WsChild;
+        SetWindowLongPtr(hwnd, GwlStyle, new nint(style));
+
+        SetParent(hwnd, taskbar);
+    }
+
+    public void PositionOnTaskbar()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == nint.Zero)
+        {
+            return;
+        }
+
+        EnsureTaskbarAttachment();
+
+        var taskbar = _taskbarHwnd != nint.Zero ? _taskbarHwnd : FindWindow("Shell_TrayWnd", null);
+        if (taskbar == nint.Zero || !GetClientRect(taskbar, out var clientRect))
+        {
+            return;
+        }
+
+        var source = PresentationSource.FromVisual(this);
+        var dpiScaleX = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+        var dpiScaleY = source?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
+
+        var miniWidthPx = (int)Math.Round((ActualWidth > 0 ? ActualWidth : Width) * dpiScaleX);
+        var miniHeightPx = (int)Math.Round((ActualHeight > 0 ? ActualHeight : Height) * dpiScaleY);
+
+        int desiredLeftPx;
+
+        if (TryGetNotificationAreaRect(out var trayRect))
+        {
+            var trayTopLeft = new PointNative { X = trayRect.Left, Y = trayRect.Top };
+            if (ScreenToClient(taskbar, ref trayTopLeft))
+            {
+                var weatherWidthPx = (int)Math.Round(EstimatedWeatherWidth * dpiScaleX);
+                var gapPx = (int)Math.Round(GapNextToWeather * dpiScaleX);
+                desiredLeftPx = trayTopLeft.X - weatherWidthPx - gapPx - miniWidthPx;
+            }
+            else
+            {
+                desiredLeftPx = clientRect.Right - miniWidthPx - 620;
+            }
+        }
+        else
+        {
+            desiredLeftPx = clientRect.Right - miniWidthPx - 620;
+        }
+
+        desiredLeftPx = Math.Clamp(desiredLeftPx, 4, Math.Max(4, clientRect.Right - miniWidthPx - 4));
+        var topPx = Math.Max(0, (clientRect.Bottom - clientRect.Top - miniHeightPx) / 2);
+
         SetWindowPos(
             hwnd,
-            HwndTopmost,
-            (int)Math.Round(Left),
-            (int)Math.Round(Top),
-            (int)Math.Round(ActualWidth > 0 ? ActualWidth : Width),
-            (int)Math.Round(ActualHeight > 0 ? ActualHeight : Height),
+            HwndTop,
+            desiredLeftPx,
+            topPx,
+            miniWidthPx,
+            miniHeightPx,
             SwpNoActivate | SwpShowWindow);
     }
 
-    private void PositionFallback()
+    public System.Windows.Point GetPopupAnchor()
     {
-        var workArea = SystemParameters.WorkArea;
-        var screenHeight = SystemParameters.PrimaryScreenHeight;
-        var taskbarHeight = Math.Max(40, screenHeight - workArea.Bottom);
-        var miniWidth = ActualWidth > 0 ? ActualWidth : Width;
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd != nint.Zero && GetWindowRect(hwnd, out var rect))
+        {
+            var source = PresentationSource.FromVisual(this);
+            var fromDevice = source?.CompositionTarget?.TransformFromDevice ?? System.Windows.Media.Matrix.Identity;
+            var topLeft = fromDevice.Transform(new System.Windows.Point(rect.Left, rect.Top));
+            return topLeft;
+        }
 
-        Left = Math.Max(workArea.Left + 4, workArea.Right - 620 - miniWidth);
-        Top = screenHeight - taskbarHeight + Math.Max(0, (taskbarHeight - Height) / 2);
+        return new System.Windows.Point(Left, Top);
+    }
+
+    // Kept for callers in App.xaml.cs. The mini widget is no longer TOPMOST; it is a
+    // child of the Windows taskbar. This method now simply repairs that taskbar attachment.
+    public void ForceTopmost()
+    {
+        EnsureTaskbarAttachment();
+        PositionOnTaskbar();
     }
 
     private void ConfigureNativeWindow()
@@ -200,16 +239,9 @@ public partial class TaskbarUsageWindow : Window
             return;
         }
 
-        var style = GetWindowLongPtr(hwnd, GwlExStyle).ToInt64();
-        style |= WsExToolWindow | WsExNoActivate;
-        SetWindowLongPtr(hwnd, GwlExStyle, new nint(style));
-    }
-
-    private static bool TryGetTaskbarRect(out RectNative rect)
-    {
-        rect = default;
-        var hwnd = FindWindow("Shell_TrayWnd", null);
-        return hwnd != nint.Zero && GetWindowRect(hwnd, out rect);
+        var exStyle = GetWindowLongPtr(hwnd, GwlExStyle).ToInt64();
+        exStyle |= WsExToolWindow | WsExNoActivate;
+        SetWindowLongPtr(hwnd, GwlExStyle, new nint(exStyle));
     }
 
     private static bool TryGetNotificationAreaRect(out RectNative rect)
@@ -260,6 +292,13 @@ public partial class TaskbarUsageWindow : Window
         public int Bottom;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PointNative
+    {
+        public int X;
+        public int Y;
+    }
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern nint FindWindow(string? lpClassName, string? lpWindowName);
 
@@ -271,8 +310,22 @@ public partial class TaskbarUsageWindow : Window
         string? lpszWindow);
 
     [DllImport("user32.dll")]
+    private static extern nint SetParent(nint hWndChild, nint hWndNewParent);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetParent(nint hWnd);
+
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(nint hWnd, out RectNative lpRect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(nint hWnd, out RectNative lpRect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ScreenToClient(nint hWnd, ref PointNative lpPoint);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
