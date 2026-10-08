@@ -3,8 +3,26 @@ $ErrorActionPreference = 'Stop'
 $project = Join-Path $PSScriptRoot '..\src\CodexUsageWidget\CodexUsageWidget.csproj'
 $output = Join-Path $PSScriptRoot '..\artifacts\win-x64'
 $exe = Join-Path $output 'CodexUsageWidget.exe'
+$iconBase64 = Join-Path $PSScriptRoot '..\src\CodexUsageWidget\Resources\CodexUsageMonitor.ico.b64'
+$generatedIcon = Join-Path $PSScriptRoot '..\src\CodexUsageWidget\Resources\CodexUsageMonitor.ico'
+$publishedIconDir = Join-Path $output 'Resources'
+$publishedIcon = Join-Path $publishedIconDir 'CodexUsageMonitor.ico'
 
 Write-Host 'Publishing Codex Usage Widget...'
+
+# Rebuild the .ico from the repository-safe Base64 source before every publish.
+# This icon is generated from the image supplied for Codex Usage Monitor.
+if (-not (Test-Path $iconBase64)) {
+  throw "Icon source was not found: $iconBase64"
+}
+
+$iconText = (Get-Content -Raw -Path $iconBase64) -replace '\s', ''
+try {
+  $iconBytes = [Convert]::FromBase64String($iconText)
+  [IO.File]::WriteAllBytes($generatedIcon, $iconBytes)
+} catch {
+  throw "Could not generate CodexUsageMonitor.ico from Base64: $($_.Exception.Message)"
+}
 
 # A running single-file executable locks the publish destination on Windows.
 # Stop any existing widget instance before publishing so users do not need to
@@ -39,6 +57,7 @@ dotnet publish $project `
   --self-contained true `
   -p:PublishSingleFile=true `
   -p:IncludeNativeLibrariesForSelfExtract=true `
+  "-p:ApplicationIcon=$generatedIcon" `
   -o $output
 
 if ($LASTEXITCODE -ne 0) {
@@ -48,6 +67,11 @@ if ($LASTEXITCODE -ne 0) {
 if (-not (Test-Path $exe)) {
   throw "Publish completed but executable was not found: $exe"
 }
+
+# Keep a separate copy for NotifyIcon so the same supplied artwork is used in
+# the hidden-icons tray as well as the EXE/shortcut icon.
+New-Item -ItemType Directory -Force -Path $publishedIconDir | Out-Null
+Copy-Item -Path $generatedIcon -Destination $publishedIcon -Force
 
 Write-Host 'Creating shortcuts...'
 
@@ -71,5 +95,6 @@ $startMenuShortcut.Save()
 
 Write-Host ''
 Write-Host "Done: $exe"
+Write-Host "Icon: $publishedIcon"
 Write-Host "Desktop shortcut: $desktop\Codex Usage Monitor.lnk"
 Write-Host "Start Menu shortcut: $startMenu\Codex Usage Monitor.lnk"
