@@ -8,6 +8,7 @@ namespace CodexUsageWidget;
 public partial class App : System.Windows.Application
 {
     private MainWindow? _window;
+    private TaskbarUsageWindow? _taskbarWindow;
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ToolStripMenuItem? _startupMenuItem;
     private bool _isExiting;
@@ -20,7 +21,11 @@ public partial class App : System.Windows.Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         _window = new MainWindow();
+        _taskbarWindow = new TaskbarUsageWindow();
+        _window.UsageUpdated += snapshot => _taskbarWindow?.UpdateUsage(snapshot);
+
         CreateTrayIcon();
+        _taskbarWindow.Show();
         _window.Show();
     }
 
@@ -35,7 +40,6 @@ public partial class App : System.Windows.Application
         var refreshItem = new Forms.ToolStripMenuItem("사용량 새로고침");
         refreshItem.Click += async (_, _) =>
         {
-            ShowWidget();
             if (_window is not null)
             {
                 await _window.RefreshUsageAsync();
@@ -126,6 +130,12 @@ public partial class App : System.Windows.Application
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
             _trayIcon = null;
+        }
+
+        if (_taskbarWindow is not null)
+        {
+            _taskbarWindow.Close();
+            _taskbarWindow = null;
         }
 
         _window?.PrepareForExit();
