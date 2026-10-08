@@ -52,7 +52,7 @@
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,0">
                     <TextBlock Text="5H " Foreground="#FF7D8B9E" FontSize="9" />
                     <TextBlock x:Name="FiveHourSmallText" Text="--%" Foreground="#FF42E4CF" FontSize="9" FontWeight="SemiBold" />
-                    <TextBlock Text="  ·  WRU " Foreground="#FF7D8B9E" FontSize="9" />
+                    <TextBlock Text="  ·  주간 " Foreground="#FF7D8B9E" FontSize="9" />
                     <TextBlock x:Name="WeeklyText" Text="--%" Foreground="#FFB19CFF" FontSize="9" FontWeight="SemiBold" />
                 </StackPanel>
             </Grid>
