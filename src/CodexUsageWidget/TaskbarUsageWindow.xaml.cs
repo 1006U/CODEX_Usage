@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using CodexUsageWidget.Models;
 
 namespace CodexUsageWidget;
@@ -15,21 +16,41 @@ public partial class TaskbarUsageWindow : Window
     private const uint SwpShowWindow = 0x0040;
     private static readonly nint HwndTopmost = new(-1);
 
-    // The Windows 11 weather/widgets button normally occupies the far-left taskbar area.
-    // Keep the Codex mini widget immediately to its right. This is deliberately an overlay,
-    // not a child of Explorer, so Explorer restarts do not own this window's lifetime.
-    private const double WeatherAreaWidth = 150;
-    private const double GapAfterWeather = 4;
+    // On the user's Windows 11 layout the weather/widgets tile is immediately to the
+    // left of the notification area. We anchor against TrayNotifyWnd and reserve the
+    // weather tile width, instead of assuming that weather is on the far-left side.
+    private const double EstimatedWeatherWidth = 190;
+    private const double GapNextToWeather = 6;
+
+    private readonly DispatcherTimer _pinTimer;
 
     public TaskbarUsageWindow()
     {
         InitializeComponent();
+
+        _pinTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(750)
+        };
+        _pinTimer.Tick += (_, _) =>
+        {
+            if (!IsVisible)
+            {
+                return;
+            }
+
+            PositionOnTaskbar();
+            ForceTopmost();
+        };
+
         SourceInitialized += (_, _) => ConfigureNativeWindow();
         Loaded += (_, _) =>
         {
             PositionOnTaskbar();
             ForceTopmost();
+            _pinTimer.Start();
         };
+        Closed += (_, _) => _pinTimer.Stop();
     }
 
     public void UpdateUsage(UsageSnapshot snapshot)
@@ -48,13 +69,9 @@ public partial class TaskbarUsageWindow : Window
 
     public void PositionOnTaskbar()
     {
-        if (!TryGetTaskbarRect(out var rect))
+        if (!TryGetTaskbarRect(out var taskbarRect))
         {
-            var workArea = SystemParameters.WorkArea;
-            var screenHeight = SystemParameters.PrimaryScreenHeight;
-            var fallbackHeight = Math.Max(40, screenHeight - workArea.Bottom);
-            Left = workArea.Left + WeatherAreaWidth + GapAfterWeather;
-            Top = screenHeight - fallbackHeight + Math.Max(0, (fallbackHeight - Height) / 2);
+            PositionFallback();
             return;
         }
 
@@ -62,11 +79,28 @@ public partial class TaskbarUsageWindow : Window
         var dpiX = source?.CompositionTarget?.TransformFromDevice.M11 ?? 1.0;
         var dpiY = source?.CompositionTarget?.TransformFromDevice.M22 ?? 1.0;
 
-        var taskbarLeft = rect.Left * dpiX;
-        var taskbarTop = rect.Top * dpiY;
-        var taskbarHeight = (rect.Bottom - rect.Top) * dpiY;
+        var taskbarLeft = taskbarRect.Left * dpiX;
+        var taskbarTop = taskbarRect.Top * dpiY;
+        var taskbarRight = taskbarRect.Right * dpiX;
+        var taskbarHeight = (taskbarRect.Bottom - taskbarRect.Top) * dpiY;
 
-        Left = taskbarLeft + WeatherAreaWidth + GapAfterWeather;
+        var miniWidth = ActualWidth > 0 ? ActualWidth : Width;
+        double desiredLeft;
+
+        if (TryGetNotificationAreaRect(out var trayRect))
+        {
+            var trayLeft = trayRect.Left * dpiX;
+            desiredLeft = trayLeft - EstimatedWeatherWidth - GapNextToWeather - miniWidth;
+        }
+        else
+        {
+            // Conservative fallback for centered-taskbar Windows 11 layouts.
+            desiredLeft = taskbarRight - 430 - EstimatedWeatherWidth - GapNextToWeather - miniWidth;
+        }
+
+        var minLeft = taskbarLeft + 4;
+        var maxLeft = Math.Max(minLeft, taskbarRight - miniWidth - 4);
+        Left = Math.Clamp(desiredLeft, minLeft, maxLeft);
         Top = taskbarTop + Math.Max(0, (taskbarHeight - Height) / 2);
     }
 
@@ -93,6 +127,17 @@ public partial class TaskbarUsageWindow : Window
             SwpNoActivate | SwpShowWindow);
     }
 
+    private void PositionFallback()
+    {
+        var workArea = SystemParameters.WorkArea;
+        var screenHeight = SystemParameters.PrimaryScreenHeight;
+        var taskbarHeight = Math.Max(40, screenHeight - workArea.Bottom);
+        var miniWidth = ActualWidth > 0 ? ActualWidth : Width;
+
+        Left = Math.Max(workArea.Left + 4, workArea.Right - 620 - miniWidth);
+        Top = screenHeight - taskbarHeight + Math.Max(0, (taskbarHeight - Height) / 2);
+    }
+
     private void ConfigureNativeWindow()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
@@ -110,12 +155,20 @@ public partial class TaskbarUsageWindow : Window
     {
         rect = default;
         var hwnd = FindWindow("Shell_TrayWnd", null);
-        if (hwnd == nint.Zero)
+        return hwnd != nint.Zero && GetWindowRect(hwnd, out rect);
+    }
+
+    private static bool TryGetNotificationAreaRect(out RectNative rect)
+    {
+        rect = default;
+        var taskbar = FindWindow("Shell_TrayWnd", null);
+        if (taskbar == nint.Zero)
         {
             return false;
         }
 
-        return GetWindowRect(hwnd, out rect);
+        var tray = FindWindowEx(taskbar, nint.Zero, "TrayNotifyWnd", null);
+        return tray != nint.Zero && GetWindowRect(tray, out rect);
     }
 
     private static string BuildTooltip(UsageSnapshot snapshot)
@@ -155,6 +208,13 @@ public partial class TaskbarUsageWindow : Window
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern nint FindWindow(string? lpClassName, string? lpWindowName);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern nint FindWindowEx(
+        nint hWndParent,
+        nint hWndChildAfter,
+        string? lpszClass,
+        string? lpszWindow);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
