@@ -42,13 +42,6 @@ public partial class MainWindow : Window
         };
 
         Closing += MainWindow_Closing;
-        Deactivated += (_, _) =>
-        {
-            if (!_allowClose && IsVisible)
-            {
-                Hide();
-            }
-        };
     }
 
     public async Task RefreshUsageAsync()
@@ -199,9 +192,17 @@ public partial class MainWindow : Window
         await RefreshUsageAsync();
     }
 
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
     {
         Hide();
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (System.Windows.Application.Current is App app)
+        {
+            app.ExitApplication();
+        }
     }
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
@@ -212,7 +213,6 @@ public partial class MainWindow : Window
         }
 
         e.Cancel = true;
-        Hide();
     }
 
     public void PrepareForExit()
