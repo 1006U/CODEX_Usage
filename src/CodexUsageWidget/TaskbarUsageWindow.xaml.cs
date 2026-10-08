@@ -272,7 +272,7 @@ public partial class TaskbarUsageWindow : Window
             return $"{label}: {window.RemainingPercent}% 남음 · {reset}";
         }
 
-        return $"{Line("5시간", snapshot.FiveHour)}\n{Line("WRU", snapshot.Weekly)}";
+        return $"{Line("5H", snapshot.FiveHour)}\n{Line("주간", snapshot.Weekly)}";
     }
 
     private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
