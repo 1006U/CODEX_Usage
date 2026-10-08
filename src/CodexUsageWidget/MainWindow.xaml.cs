@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _refreshTimer;
     private readonly DispatcherTimer _countdownTimer;
     private bool _isRefreshing;
+    private bool _allowClose;
     private int _consecutiveFailures;
     private UsageSnapshot? _lastSnapshot;
 
@@ -37,9 +39,11 @@ public partial class MainWindow : Window
             _countdownTimer.Start();
             await RefreshUsageAsync();
         };
+
+        Closing += MainWindow_Closing;
     }
 
-    private async Task RefreshUsageAsync()
+    public async Task RefreshUsageAsync()
     {
         if (_isRefreshing)
         {
@@ -177,9 +181,25 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
+        Hide();
+    }
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_allowClose || (System.Windows.Application.Current as App)?.IsExiting == true)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        Hide();
+    }
+
+    public void PrepareForExit()
+    {
+        _allowClose = true;
         _refreshTimer.Stop();
         _countdownTimer.Stop();
-        Application.Current.Shutdown();
     }
 
     private void Root_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
