@@ -70,9 +70,9 @@ public partial class TaskbarUsageWindow : Window
         Top = taskbarTop + Math.Max(0, (taskbarHeight - Height) / 2);
     }
 
-    public Point GetPopupAnchor()
+    public System.Windows.Point GetPopupAnchor()
     {
-        return new Point(Left, Top);
+        return new System.Windows.Point(Left, Top);
     }
 
     public void ForceTopmost()
