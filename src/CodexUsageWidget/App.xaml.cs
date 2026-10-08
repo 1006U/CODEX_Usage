@@ -11,6 +11,7 @@ public partial class App : System.Windows.Application
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ToolStripMenuItem? _startupMenuItem;
     private bool _isExiting;
+    private bool _suppressStartupToggle;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -49,23 +50,7 @@ public partial class App : System.Windows.Application
             CheckOnClick = true,
             Checked = StartupManager.IsEnabled()
         };
-        _startupMenuItem.CheckedChanged += (_, _) =>
-        {
-            if (_startupMenuItem is null)
-            {
-                return;
-            }
-
-            try
-            {
-                StartupManager.SetEnabled(_startupMenuItem.Checked);
-            }
-            catch
-            {
-                _startupMenuItem.CheckedChanged -= (_, _) => { };
-                _startupMenuItem.Checked = StartupManager.IsEnabled();
-            }
-        };
+        _startupMenuItem.CheckedChanged += StartupMenuItem_CheckedChanged;
         menu.Items.Add(_startupMenuItem);
 
         menu.Items.Add(new Forms.ToolStripSeparator());
@@ -83,6 +68,25 @@ public partial class App : System.Windows.Application
         };
 
         _trayIcon.DoubleClick += (_, _) => ShowWidget();
+    }
+
+    private void StartupMenuItem_CheckedChanged(object? sender, EventArgs e)
+    {
+        if (_suppressStartupToggle || _startupMenuItem is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StartupManager.SetEnabled(_startupMenuItem.Checked);
+        }
+        catch
+        {
+            _suppressStartupToggle = true;
+            _startupMenuItem.Checked = StartupManager.IsEnabled();
+            _suppressStartupToggle = false;
+        }
     }
 
     public bool IsExiting => _isExiting;
@@ -105,8 +109,6 @@ public partial class App : System.Windows.Application
         }
 
         _window.Activate();
-        _window.Topmost = true;
-        _window.Topmost = false;
         _window.Topmost = true;
     }
 
