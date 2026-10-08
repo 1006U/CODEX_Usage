@@ -35,14 +35,20 @@ public partial class MainWindow : Window
         };
         _countdownTimer.Tick += (_, _) => UpdateCountdowns();
 
-        Loaded += async (_, _) =>
+        Loaded += (_, _) =>
         {
             _refreshTimer.Start();
             _countdownTimer.Start();
-            await RefreshUsageAsync();
         };
 
         Closing += MainWindow_Closing;
+        Deactivated += (_, _) =>
+        {
+            if (!_allowClose && IsVisible)
+            {
+                Hide();
+            }
+        };
     }
 
     public async Task RefreshUsageAsync()
@@ -87,6 +93,17 @@ public partial class MainWindow : Window
         {
             _isRefreshing = false;
         }
+    }
+
+    public void PositionAboveTaskbar(double anchorLeft, double anchorTop, double anchorWidth)
+    {
+        var workArea = SystemParameters.WorkArea;
+        var desiredLeft = anchorLeft + (anchorWidth - Width) / 2.0;
+        var minLeft = workArea.Left + 8;
+        var maxLeft = Math.Max(minLeft, workArea.Right - Width - 8);
+
+        Left = Math.Clamp(desiredLeft, minLeft, maxLeft);
+        Top = Math.Max(workArea.Top + 8, anchorTop - Height - 8);
     }
 
     private static void ApplyWindow(
