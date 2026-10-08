@@ -28,7 +28,7 @@ public partial class App : System.Windows.Application
         _taskbarWindow.Show();
         _taskbarWindow.ForceTopmost();
 
-        // Taskbar mode starts collapsed, like Codex Pulse. Clicking the mini widget opens details.
+        // Start collapsed. Clicking the taskbar mini widget opens the detail panel.
         _window.Hide();
         _ = _window.RefreshUsageAsync();
     }
@@ -101,17 +101,8 @@ public partial class App : System.Windows.Application
 
     public void ToggleWidgetFromTaskbar()
     {
-        if (_window is null)
-        {
-            return;
-        }
-
-        if (_window.IsVisible)
-        {
-            _window.Hide();
-            return;
-        }
-
+        // The taskbar mini widget only opens/activates the detail panel.
+        // Hiding is intentionally controlled only by the detail panel's minimize button.
         ShowWidget(positionAboveTaskbar: true);
     }
 
