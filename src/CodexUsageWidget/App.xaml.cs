@@ -26,7 +26,11 @@ public partial class App : System.Windows.Application
 
         CreateTrayIcon();
         _taskbarWindow.Show();
-        _window.Show();
+        _taskbarWindow.ForceTopmost();
+
+        // Taskbar mode starts collapsed, like Codex Pulse. Clicking the mini widget opens details.
+        _window.Hide();
+        _ = _window.RefreshUsageAsync();
     }
 
     private void CreateTrayIcon()
@@ -95,11 +99,34 @@ public partial class App : System.Windows.Application
 
     public bool IsExiting => _isExiting;
 
-    public void ShowWidget()
+    public void ToggleWidgetFromTaskbar()
     {
         if (_window is null)
         {
             return;
+        }
+
+        if (_window.IsVisible)
+        {
+            _window.Hide();
+            return;
+        }
+
+        ShowWidget(positionAboveTaskbar: true);
+    }
+
+    public void ShowWidget(bool positionAboveTaskbar = false)
+    {
+        if (_window is null)
+        {
+            return;
+        }
+
+        if (positionAboveTaskbar && _taskbarWindow is not null)
+        {
+            _taskbarWindow.PositionOnTaskbar();
+            var anchor = _taskbarWindow.GetPopupAnchor();
+            _window.PositionAboveTaskbar(anchor.X, anchor.Y, _taskbarWindow.ActualWidth > 0 ? _taskbarWindow.ActualWidth : _taskbarWindow.Width);
         }
 
         if (!_window.IsVisible)
