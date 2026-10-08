@@ -17,6 +17,8 @@ public partial class MainWindow : Window
     private int _consecutiveFailures;
     private UsageSnapshot? _lastSnapshot;
 
+    public event Action<UsageSnapshot>? UsageUpdated;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -65,6 +67,7 @@ public partial class MainWindow : Window
             ApplyWindow(snapshot.Weekly, WeeklyProgress, WeeklyPercentText,
                 WeeklyResetText, WeeklyRemainingText);
             UpdateCountdowns();
+            UsageUpdated?.Invoke(snapshot);
 
             StatusText.Text = snapshot.FiveHour is null && snapshot.Weekly is null
                 ? "사용량 창을 찾지 못했습니다. codex login 상태를 확인하세요."
