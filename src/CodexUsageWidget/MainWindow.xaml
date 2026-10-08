@@ -1,0 +1,159 @@
+<Window x:Class="CodexUsageWidget.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Codex Usage"
+        Width="340"
+        Height="235"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="True">
+    <Border Margin="8"
+            Padding="16"
+            CornerRadius="16"
+            Background="#EE16181D"
+            BorderBrush="#334A5260"
+            BorderThickness="1"
+            MouseLeftButtonDown="Root_MouseLeftButtonDown">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="14" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="CODEX"
+                               Foreground="#FFF4F5F7"
+                               FontWeight="SemiBold"
+                               FontSize="15" />
+                    <TextBlock Text="  USAGE"
+                               Foreground="#FF8B93A1"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Width="26"
+                        Height="24"
+                        Padding="0"
+                        Content="↻"
+                        FontSize="15"
+                        Foreground="#FFD5D9E0"
+                        Background="#222C313A"
+                        BorderBrush="#334A5260"
+                        Cursor="Hand"
+                        Click="RefreshButton_Click" />
+
+                <Button Grid.Column="3"
+                        Width="26"
+                        Height="24"
+                        Padding="0"
+                        Content="×"
+                        FontSize="17"
+                        Foreground="#FFD5D9E0"
+                        Background="#222C313A"
+                        BorderBrush="#334A5260"
+                        Cursor="Hand"
+                        Click="CloseButton_Click" />
+            </Grid>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="66" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="58" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="5 HOURS" Foreground="#FF9AA2AF" FontSize="10" FontWeight="SemiBold" />
+                    <TextBlock x:Name="FiveHourPercentText" Text="--%" Foreground="#FFF5F7FA" FontSize="20" FontWeight="Bold" />
+                </StackPanel>
+
+                <ProgressBar x:Name="FiveHourProgress"
+                             Grid.Column="1"
+                             Margin="8,5,10,0"
+                             Height="8"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="0"
+                             Foreground="#FF7C9CFF"
+                             Background="#FF2A2E36" />
+
+                <TextBlock x:Name="FiveHourResetText"
+                           Grid.Column="2"
+                           Text="--"
+                           Foreground="#FF8B93A1"
+                           FontSize="10"
+                           TextAlignment="Right"
+                           VerticalAlignment="Top"
+                           Margin="0,2,0,0" />
+            </Grid>
+
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="66" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="58" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="WEEKLY" Foreground="#FF9AA2AF" FontSize="10" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeeklyPercentText" Text="--%" Foreground="#FFF5F7FA" FontSize="20" FontWeight="Bold" />
+                </StackPanel>
+
+                <ProgressBar x:Name="WeeklyProgress"
+                             Grid.Column="1"
+                             Margin="8,5,10,0"
+                             Height="8"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="0"
+                             Foreground="#FF9B82FF"
+                             Background="#FF2A2E36" />
+
+                <TextBlock x:Name="WeeklyResetText"
+                           Grid.Column="2"
+                           Text="--"
+                           Foreground="#FF8B93A1"
+                           FontSize="10"
+                           TextAlignment="Right"
+                           VerticalAlignment="Top"
+                           Margin="0,2,0,0" />
+            </Grid>
+
+            <Grid Grid.Row="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="StatusText"
+                           Text="Codex 연결 중..."
+                           Foreground="#FF737C8B"
+                           FontSize="10"
+                           TextTrimming="CharacterEllipsis" />
+
+                <TextBlock x:Name="UpdatedText"
+                           Grid.Column="1"
+                           Text=""
+                           Foreground="#FF606875"
+                           FontSize="10" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
