@@ -1,28 +1,57 @@
 <Window x:Class="CodexUsageWidget.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Codex Usage"
-        Width="340"
-        Height="235"
+        Title="Codex Usage Monitor"
+        Width="360"
+        Height="420"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="True">
+    <Window.Resources>
+        <Style x:Key="GhostButton" TargetType="Button">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="#FFD7DEE8" />
+            <Setter Property="Background" Value="#FF151D28" />
+            <Setter Property="BorderBrush" Value="#FF263447" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style x:Key="ThinProgress" TargetType="ProgressBar">
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="100" />
+            <Setter Property="Background" Value="#FF242F3E" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+    </Window.Resources>
+
     <Border Margin="8"
-            Padding="16"
+            Padding="18"
             CornerRadius="16"
-            Background="#EE16181D"
-            BorderBrush="#334A5260"
+            Background="#F30C141E"
+            BorderBrush="#FF26384D"
             BorderThickness="1"
             MouseLeftButtonDown="Root_MouseLeftButtonDown">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.32" />
+        </Border.Effect>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="12" />
+                <RowDefinition Height="16" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="14" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="1" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="1" />
+                <RowDefinition Height="16" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
@@ -35,125 +64,87 @@
                     <ColumnDefinition Width="8" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="CODEX"
-                               Foreground="#FFF4F5F7"
-                               FontWeight="SemiBold"
-                               FontSize="15" />
-                    <TextBlock Text="  USAGE"
-                               Foreground="#FF8B93A1"
-                               FontSize="12"
-                               VerticalAlignment="Center" />
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border CornerRadius="5" BorderBrush="#FF24D9C5" BorderThickness="1" Padding="7,3">
+                            <TextBlock Text="CODEX" Foreground="#FF57E3D0" FontSize="11" FontWeight="SemiBold" />
+                        </Border>
+                        <TextBlock Text="  Usage Monitor" VerticalAlignment="Center" Foreground="#FFF0F4F8" FontSize="15" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <TextBlock Text="ChatGPT / Codex CLI rate limits" Margin="0,6,0,0" Foreground="#FF77869A" FontSize="10" />
                 </StackPanel>
-
-                <Button Grid.Column="1"
-                        Width="26"
-                        Height="24"
-                        Padding="0"
-                        Content="↻"
-                        FontSize="15"
-                        Foreground="#FFD5D9E0"
-                        Background="#222C313A"
-                        BorderBrush="#334A5260"
-                        Cursor="Hand"
-                        Click="RefreshButton_Click" />
-
-                <Button Grid.Column="3"
-                        Width="26"
-                        Height="24"
-                        Padding="0"
-                        Content="×"
-                        FontSize="17"
-                        Foreground="#FFD5D9E0"
-                        Background="#222C313A"
-                        BorderBrush="#334A5260"
-                        Cursor="Hand"
-                        Click="CloseButton_Click" />
+                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="↻" FontSize="16" Click="RefreshButton_Click" />
+                <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="×" FontSize="17" Click="CloseButton_Click" />
             </Grid>
 
             <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="66" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="58" />
+                    <ColumnDefinition Width="1" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="5 HOURS" Foreground="#FF9AA2AF" FontSize="10" FontWeight="SemiBold" />
-                    <TextBlock x:Name="FiveHourPercentText" Text="--%" Foreground="#FFF5F7FA" FontSize="20" FontWeight="Bold" />
+                <StackPanel Margin="0,0,18,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="4" Height="21" CornerRadius="2" Background="#FF42E4CF" Margin="0,0,9,0" />
+                        <TextBlock Text="5시간" Foreground="#FFC1CBD8" FontSize="12" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock x:Name="FiveHourPercentText" Text="--%" Margin="13,7,0,0" Foreground="#FFF7FAFC" FontSize="29" FontWeight="Bold" />
+                    <TextBlock x:Name="FiveHourResetText" Text="RESET --" Margin="13,3,0,0" Foreground="#FF56DCCA" FontSize="10" />
                 </StackPanel>
-
-                <ProgressBar x:Name="FiveHourProgress"
-                             Grid.Column="1"
-                             Margin="8,5,10,0"
-                             Height="8"
-                             Minimum="0"
-                             Maximum="100"
-                             Value="0"
-                             Foreground="#FF7C9CFF"
-                             Background="#FF2A2E36" />
-
-                <TextBlock x:Name="FiveHourResetText"
-                           Grid.Column="2"
-                           Text="--"
-                           Foreground="#FF8B93A1"
-                           FontSize="10"
-                           TextAlignment="Right"
-                           VerticalAlignment="Top"
-                           Margin="0,2,0,0" />
-            </Grid>
-
-            <Grid Grid.Row="4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="66" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="58" />
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="WEEKLY" Foreground="#FF9AA2AF" FontSize="10" FontWeight="SemiBold" />
-                    <TextBlock x:Name="WeeklyPercentText" Text="--%" Foreground="#FFF5F7FA" FontSize="20" FontWeight="Bold" />
+                <Border Grid.Column="1" Background="#FF253244" />
+                <StackPanel Grid.Column="2" Margin="18,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="4" Height="21" CornerRadius="2" Background="#FF9B7BFF" Margin="0,0,9,0" />
+                        <TextBlock Text="주간" Foreground="#FFC1CBD8" FontSize="12" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock x:Name="WeeklyPercentText" Text="--%" Margin="13,7,0,0" Foreground="#FFF7FAFC" FontSize="29" FontWeight="Bold" />
+                    <TextBlock x:Name="WeeklyResetText" Text="RESET --" Margin="13,3,0,0" Foreground="#FFB19CFF" FontSize="10" />
                 </StackPanel>
-
-                <ProgressBar x:Name="WeeklyProgress"
-                             Grid.Column="1"
-                             Margin="8,5,10,0"
-                             Height="8"
-                             Minimum="0"
-                             Maximum="100"
-                             Value="0"
-                             Foreground="#FF9B82FF"
-                             Background="#FF2A2E36" />
-
-                <TextBlock x:Name="WeeklyResetText"
-                           Grid.Column="2"
-                           Text="--"
-                           Foreground="#FF8B93A1"
-                           FontSize="10"
-                           TextAlignment="Right"
-                           VerticalAlignment="Top"
-                           Margin="0,2,0,0" />
             </Grid>
 
-            <Grid Grid.Row="6">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <Border Grid.Row="4" Background="#FF202C3B" />
 
-                <TextBlock x:Name="StatusText"
-                           Text="Codex 연결 중..."
-                           Foreground="#FF737C8B"
-                           FontSize="10"
-                           TextTrimming="CharacterEllipsis" />
+            <StackPanel Grid.Row="6">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="5시간 한도" Foreground="#FFD8E0E9" FontSize="13" FontWeight="SemiBold" />
+                    <TextBlock x:Name="FiveHourRemainingText" Grid.Column="1" Text="--% 남음" Foreground="#FF42E4CF" FontSize="12" FontWeight="SemiBold" />
+                </Grid>
+                <ProgressBar x:Name="FiveHourProgress" Style="{StaticResource ThinProgress}" Foreground="#FF42E4CF" Margin="0,9,0,0" />
+                <Grid Margin="0,7,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="5시간 기준" Foreground="#FF718096" FontSize="9" />
+                    <TextBlock x:Name="FiveHourCountdownText" Grid.Column="1" Text="초기화 --" Foreground="#FF8492A6" FontSize="9" />
+                </Grid>
 
-                <TextBlock x:Name="UpdatedText"
-                           Grid.Column="1"
-                           Text=""
-                           Foreground="#FF606875"
-                           FontSize="10" />
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="주간 한도" Foreground="#FFD8E0E9" FontSize="13" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeeklyRemainingText" Grid.Column="1" Text="--% 남음" Foreground="#FFB19CFF" FontSize="12" FontWeight="SemiBold" />
+                </Grid>
+                <ProgressBar x:Name="WeeklyProgress" Style="{StaticResource ThinProgress}" Foreground="#FF9B7BFF" Margin="0,9,0,0" />
+                <Grid Margin="0,7,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="7일 기준" Foreground="#FF718096" FontSize="9" />
+                    <TextBlock x:Name="WeeklyCountdownText" Grid.Column="1" Text="초기화 --" Foreground="#FF8492A6" FontSize="9" />
+                </Grid>
+            </StackPanel>
+
+            <Border Grid.Row="8" Background="#FF202C3B" />
+
+            <Grid Grid.Row="10">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="자동 동기화" Foreground="#FFAAB5C4" FontSize="10" />
+                    <TextBlock x:Name="StatusText" Text="Codex 연결 중..." Margin="0,4,0,0" Foreground="#FF6F8197" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="230" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                    <TextBlock Text="마지막 업데이트" Foreground="#FF78879A" FontSize="9" TextAlignment="Right" />
+                    <TextBlock x:Name="UpdatedText" Text="--:--:--" Margin="0,4,0,0" Foreground="#FFAAB5C4" FontSize="10" TextAlignment="Right" />
+                </StackPanel>
             </Grid>
+
+            <TextBlock Grid.Row="12" Text="모델 토큰을 사용하지 않고 Codex의 rate-limit 정보만 조회합니다." Foreground="#FF536477" FontSize="9" TextAlignment="Center" />
         </Grid>
     </Border>
 </Window>
