@@ -9,7 +9,7 @@
         AllowsTransparency="True"
         Background="Transparent"
         Topmost="True"
-        ShowInTaskbar="True">
+        ShowInTaskbar="False">
     <Window.Resources>
         <Style x:Key="GhostButton" TargetType="Button">
             <Setter Property="Width" Value="30" />
