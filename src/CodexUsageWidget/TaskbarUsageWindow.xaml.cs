@@ -26,9 +26,12 @@ public partial class TaskbarUsageWindow : Window
     {
         InitializeComponent();
 
-        _pinTimer = new DispatcherTimer
+        // Windows 11 can briefly repaint the taskbar above overlay windows when another
+        // app receives focus. Reassert the mini widget quickly enough that it no longer
+        // visibly disappears between shell repaints.
+        _pinTimer = new DispatcherTimer(DispatcherPriority.Send)
         {
-            Interval = TimeSpan.FromMilliseconds(750)
+            Interval = TimeSpan.FromMilliseconds(80)
         };
         _pinTimer.Tick += (_, _) =>
         {
@@ -48,6 +51,17 @@ public partial class TaskbarUsageWindow : Window
             PositionOnTaskbar();
             ForceTopmost();
             _pinTimer.Start();
+        };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() =>
+                {
+                    PositionOnTaskbar();
+                    ForceTopmost();
+                }));
+            }
         };
         Closed += (_, _) => _pinTimer.Stop();
     }
