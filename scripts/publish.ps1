@@ -11,7 +11,9 @@ $publishedIcon = Join-Path $publishedIconDir 'CodexUsageMonitor.ico'
 Write-Host 'Publishing Codex Usage Widget...'
 
 # Rebuild the .ico from the repository-safe Base64 source before every publish.
-# This icon is generated from the image supplied for Codex Usage Monitor.
+# The source is a cloud-only, transparent, multi-size icon derived from the image
+# supplied for Codex Usage Monitor. Text/background are intentionally excluded so
+# the tray icon remains readable at 16/20/24/32 px.
 if (-not (Test-Path $iconBase64)) {
   throw "Icon source was not found: $iconBase64"
 }
@@ -25,8 +27,6 @@ try {
 }
 
 # A running single-file executable locks the publish destination on Windows.
-# Stop any existing widget instance before publishing so users do not need to
-# manually exit the tray application every time they update it.
 $running = Get-Process -Name 'CodexUsageWidget' -ErrorAction SilentlyContinue
 if ($running) {
   Write-Host 'Stopping running Codex Usage Widget...'
@@ -45,8 +45,6 @@ if ($running) {
 
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 
-# Remove an old published executable after the process is stopped. This catches
-# stale/broken output and ensures the existence check below refers to this run.
 if (Test-Path $exe) {
   Remove-Item $exe -Force
 }
@@ -68,33 +66,52 @@ if (-not (Test-Path $exe)) {
   throw "Publish completed but executable was not found: $exe"
 }
 
-# Keep a separate copy for NotifyIcon so the same supplied artwork is used in
-# the hidden-icons tray as well as the EXE/shortcut icon.
+# Keep a standalone ICO next to the published EXE. NotifyIcon and shortcuts use
+# this file directly, instead of relying on the shell to extract an icon from the
+# single-file EXE (which is more prone to stale icon-cache entries).
 New-Item -ItemType Directory -Force -Path $publishedIconDir | Out-Null
 Copy-Item -Path $generatedIcon -Destination $publishedIcon -Force
 
 Write-Host 'Creating shortcuts...'
 
 $wsh = New-Object -ComObject WScript.Shell
-
 $desktop = [Environment]::GetFolderPath('Desktop')
-$desktopShortcut = $wsh.CreateShortcut((Join-Path $desktop 'Codex Usage Monitor.lnk'))
+$startMenu = [Environment]::GetFolderPath('Programs')
+$desktopLinkPath = Join-Path $desktop 'Codex Usage Monitor.lnk'
+$startMenuLinkPath = Join-Path $startMenu 'Codex Usage Monitor.lnk'
+
+# Delete the old .lnk files first. Reusing an existing shortcut often leaves the
+# old icon cached by Explorer even when IconLocation is changed.
+Remove-Item $desktopLinkPath -Force -ErrorAction SilentlyContinue
+Remove-Item $startMenuLinkPath -Force -ErrorAction SilentlyContinue
+
+$desktopShortcut = $wsh.CreateShortcut($desktopLinkPath)
 $desktopShortcut.TargetPath = $exe
 $desktopShortcut.WorkingDirectory = $output
-$desktopShortcut.IconLocation = "$exe,0"
+$desktopShortcut.IconLocation = "$publishedIcon,0"
 $desktopShortcut.Description = 'Codex 5-hour and weekly usage monitor'
 $desktopShortcut.Save()
 
-$startMenu = [Environment]::GetFolderPath('Programs')
-$startMenuShortcut = $wsh.CreateShortcut((Join-Path $startMenu 'Codex Usage Monitor.lnk'))
+$startMenuShortcut = $wsh.CreateShortcut($startMenuLinkPath)
 $startMenuShortcut.TargetPath = $exe
 $startMenuShortcut.WorkingDirectory = $output
-$startMenuShortcut.IconLocation = "$exe,0"
+$startMenuShortcut.IconLocation = "$publishedIcon,0"
 $startMenuShortcut.Description = 'Codex 5-hour and weekly usage monitor'
 $startMenuShortcut.Save()
+
+# Ask Explorer to refresh shortcut/icon presentation. This does not restart
+# Explorer or delete user settings; it simply requests a shell icon refresh.
+$ie4uinit = Join-Path $env:SystemRoot 'System32\ie4uinit.exe'
+if (Test-Path $ie4uinit) {
+  try {
+    Start-Process -FilePath $ie4uinit -ArgumentList '-show' -WindowStyle Hidden -Wait
+  } catch {
+    # Non-fatal: the new shortcut/icon files are already correct.
+  }
+}
 
 Write-Host ''
 Write-Host "Done: $exe"
 Write-Host "Icon: $publishedIcon"
-Write-Host "Desktop shortcut: $desktop\Codex Usage Monitor.lnk"
-Write-Host "Start Menu shortcut: $startMenu\Codex Usage Monitor.lnk"
+Write-Host "Desktop shortcut: $desktopLinkPath"
+Write-Host "Start Menu shortcut: $startMenuLinkPath"
