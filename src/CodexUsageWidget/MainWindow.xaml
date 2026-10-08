@@ -63,6 +63,8 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="8" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
@@ -74,7 +76,8 @@
                     <TextBlock Text="ChatGPT / Codex CLI rate limits" Margin="0,6,0,0" Foreground="#FF77869A" FontSize="10" />
                 </StackPanel>
                 <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="↻" FontSize="16" Click="RefreshButton_Click" />
-                <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="×" FontSize="17" Click="CloseButton_Click" />
+                <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="−" FontSize="17" Click="MinimizeButton_Click" ToolTip="상세 패널 숨기기" />
+                <Button Grid.Column="5" Style="{StaticResource GhostButton}" Content="×" FontSize="17" Click="CloseButton_Click" ToolTip="프로그램 종료" />
             </Grid>
 
             <Grid Grid.Row="2">
