@@ -6,6 +6,33 @@ $exe = Join-Path $output 'CodexUsageWidget.exe'
 
 Write-Host 'Publishing Codex Usage Widget...'
 
+# A running single-file executable locks the publish destination on Windows.
+# Stop any existing widget instance before publishing so users do not need to
+# manually exit the tray application every time they update it.
+$running = Get-Process -Name 'CodexUsageWidget' -ErrorAction SilentlyContinue
+if ($running) {
+  Write-Host 'Stopping running Codex Usage Widget...'
+  $running | Stop-Process -Force
+
+  $deadline = (Get-Date).AddSeconds(5)
+  do {
+    Start-Sleep -Milliseconds 150
+    $stillRunning = Get-Process -Name 'CodexUsageWidget' -ErrorAction SilentlyContinue
+  } while ($stillRunning -and (Get-Date) -lt $deadline)
+
+  if ($stillRunning) {
+    throw 'Could not stop CodexUsageWidget.exe. Close it manually and run publish again.'
+  }
+}
+
+New-Item -ItemType Directory -Force -Path $output | Out-Null
+
+# Remove an old published executable after the process is stopped. This catches
+# stale/broken output and ensures the existence check below refers to this run.
+if (Test-Path $exe) {
+  Remove-Item $exe -Force
+}
+
 dotnet publish $project `
   -c Release `
   -r win-x64 `
@@ -13,6 +40,10 @@ dotnet publish $project `
   -p:PublishSingleFile=true `
   -p:IncludeNativeLibrariesForSelfExtract=true `
   -o $output
+
+if ($LASTEXITCODE -ne 0) {
+  throw "dotnet publish failed with exit code $LASTEXITCODE. Shortcuts were not changed."
+}
 
 if (-not (Test-Path $exe)) {
   throw "Publish completed but executable was not found: $exe"
