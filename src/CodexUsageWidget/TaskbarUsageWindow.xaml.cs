@@ -16,13 +16,11 @@ public partial class TaskbarUsageWindow : Window
     private const uint SwpShowWindow = 0x0040;
     private static readonly nint HwndTopmost = new(-1);
 
-    // On the user's Windows 11 layout the weather/widgets tile is immediately to the
-    // left of the notification area. We anchor against TrayNotifyWnd and reserve the
-    // weather tile width, instead of assuming that weather is on the far-left side.
     private const double EstimatedWeatherWidth = 190;
     private const double GapNextToWeather = 6;
 
     private readonly DispatcherTimer _pinTimer;
+    private UsageSnapshot? _lastSnapshot;
 
     public TaskbarUsageWindow()
     {
@@ -39,6 +37,7 @@ public partial class TaskbarUsageWindow : Window
                 return;
             }
 
+            RenderMiniUsage();
             PositionOnTaskbar();
             ForceTopmost();
         };
@@ -55,16 +54,58 @@ public partial class TaskbarUsageWindow : Window
 
     public void UpdateUsage(UsageSnapshot snapshot)
     {
-        var five = snapshot.FiveHour?.RemainingPercent;
-        var weekly = snapshot.Weekly?.RemainingPercent;
-
-        FiveHourText.Text = five is null ? "  --%" : $"  {five}%";
-        FiveHourSmallText.Text = five is null ? "--%" : $"{five}%";
-        WeeklyText.Text = weekly is null ? "--%" : $"{weekly}%";
+        _lastSnapshot = snapshot;
+        RenderMiniUsage();
         ToolTip = BuildTooltip(snapshot);
 
         PositionOnTaskbar();
         ForceTopmost();
+    }
+
+    private void RenderMiniUsage()
+    {
+        var five = _lastSnapshot?.FiveHour;
+        var weekly = _lastSnapshot?.Weekly;
+
+        FiveHourText.Text = five is null ? "  --%" : $"  {five.RemainingPercent}%";
+        FiveHourSmallText.Text = FormatMiniWindow(five);
+        WeeklyText.Text = FormatMiniWindow(weekly);
+    }
+
+    private static string FormatMiniWindow(UsageWindow? window)
+    {
+        if (window is null)
+        {
+            return "--%";
+        }
+
+        if (window.RemainingPercent > 0)
+        {
+            return $"{window.RemainingPercent}%";
+        }
+
+        if (window.ResetsAt is null)
+        {
+            return "RESET --";
+        }
+
+        var remaining = window.ResetsAt.Value - DateTimeOffset.Now;
+        if (remaining <= TimeSpan.Zero)
+        {
+            return "RESET soon";
+        }
+
+        if (remaining.TotalDays >= 1)
+        {
+            return $"RESET {(int)remaining.TotalDays}d {remaining.Hours}h";
+        }
+
+        if (remaining.TotalHours >= 1)
+        {
+            return $"RESET {(int)remaining.TotalHours}h {remaining.Minutes}m";
+        }
+
+        return $"RESET {Math.Max(0, remaining.Minutes)}m";
     }
 
     public void PositionOnTaskbar()
@@ -94,7 +135,6 @@ public partial class TaskbarUsageWindow : Window
         }
         else
         {
-            // Conservative fallback for centered-taskbar Windows 11 layouts.
             desiredLeft = taskbarRight - 430 - EstimatedWeatherWidth - GapNextToWeather - miniWidth;
         }
 
@@ -186,7 +226,7 @@ public partial class TaskbarUsageWindow : Window
             return $"{label}: {window.RemainingPercent}% 남음 · {reset}";
         }
 
-        return $"{Line("5시간", snapshot.FiveHour)}\n{Line("주간", snapshot.Weekly)}";
+        return $"{Line("5시간", snapshot.FiveHour)}\n{Line("WRU", snapshot.Weekly)}";
     }
 
     private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
