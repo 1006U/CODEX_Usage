@@ -12,6 +12,8 @@ public partial class MainWindow : Window
     private readonly CodexUsageReader _reader = new();
     private readonly DispatcherTimer _refreshTimer;
     private readonly DispatcherTimer _countdownTimer;
+    private static readonly TimeSpan MinimumUsageQuerySpacing = TimeSpan.FromSeconds(30);
+    private DateTimeOffset _nextUsageQueryAtUtc = DateTimeOffset.MinValue;
     private bool _isRefreshing;
     private bool _allowClose;
     private int _consecutiveFailures;
@@ -51,8 +53,19 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Repeated manual clicks must never start an inference/model request.
+        // All refreshes use only the usage endpoint; a short cooldown also
+        // prevents unnecessary API polling and accidental rate-limit errors.
+        var timeUntilNextQuery = _nextUsageQueryAtUtc - DateTimeOffset.UtcNow;
+        if (timeUntilNextQuery > TimeSpan.Zero)
+        {
+            StatusText.Text = $"최근 사용량 유지 · {Math.Ceiling(timeUntilNextQuery.TotalSeconds):0}초 후 새로고침 가능";
+            return;
+        }
+
         _isRefreshing = true;
-        StatusText.Text = "Codex rate-limit 확인 중...";
+        _nextUsageQueryAtUtc = DateTimeOffset.UtcNow + MinimumUsageQuerySpacing;
+        StatusText.Text = "Codex 사용량만 조회 중 (모델 호출 없음)...";
 
         try
         {
@@ -70,7 +83,7 @@ public partial class MainWindow : Window
 
             StatusText.Text = snapshot.FiveHour is null && snapshot.Weekly is null
                 ? "사용량 창을 찾지 못했습니다. codex login 상태를 확인하세요."
-                : "정상 · 1분 간격 자동 동기화";
+                : "정상 · 모델 호출 없음 · 1분 간격 자동 갱신";
             UpdatedText.Text = snapshot.CheckedAt.ToString("HH:mm:ss");
         }
         catch (Exception ex)
@@ -78,6 +91,11 @@ public partial class MainWindow : Window
             _consecutiveFailures++;
             var backoffMinutes = Math.Min(16, Math.Pow(2, Math.Min(_consecutiveFailures - 1, 4)));
             _refreshTimer.Interval = Jitter(TimeSpan.FromMinutes(backoffMinutes));
+            if (ex.Message.Contains("429", StringComparison.OrdinalIgnoreCase))
+            {
+                // Respect the request limit even if the user repeatedly presses refresh.
+                _nextUsageQueryAtUtc = DateTimeOffset.UtcNow + TimeSpan.FromMinutes(backoffMinutes);
+            }
 
             StatusText.Text = $"{ToUserMessage(ex)} · {backoffMinutes:0}분 후 재시도";
             UpdatedText.Text = DateTime.Now.ToString("HH:mm:ss");
