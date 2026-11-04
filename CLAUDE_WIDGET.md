@@ -50,3 +50,7 @@ artifacts\claude-win-x64\ClaudeUsageWidget.exe
 It also generates a desktop and Start menu shortcut named **Claude Code Usage Monitor**. The existing Codex EXE is untouched and can run simultaneously.
 
 The Windows version of the reference project uses Node.js. This is a separate original WPF implementation inspired by its OAuth usage response approach.
+
+## Refresh safety
+
+The refresh button uses **read-only usage queries only**. It does not send a model prompt or request generated tokens. Repeated clicks within 30 seconds reuse the latest displayed result instead of sending another usage request. After HTTP 429, retries are delayed using the exponential backoff interval. Other Claude Code sessions can still consume tokens independently; a refresh may reveal recently accounted usage.
