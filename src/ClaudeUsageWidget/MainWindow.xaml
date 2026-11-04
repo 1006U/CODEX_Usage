@@ -89,7 +89,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,18,0">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="4" Height="21" CornerRadius="2" Background="#FF00805A" Margin="0,0,9,0" />
+                        <Border Width="4" Height="21" CornerRadius="2" Background="#FFE07B5F" Margin="0,0,9,0" />
                         <TextBlock Text="5시간" Foreground="#FF4A4A4A" FontSize="12" VerticalAlignment="Center" />
                     </StackPanel>
                     <TextBlock x:Name="FiveHourPercentText" Text="--%" Margin="13,7,0,0" Foreground="#FF00B67A" FontSize="29" FontWeight="Bold" />
