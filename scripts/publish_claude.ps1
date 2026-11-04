@@ -11,9 +11,8 @@ $publishedIcon = Join-Path $publishedIconDir 'ClaudeUsageMonitor.ico'
 Write-Host 'Publishing Claude Code Usage Widget...'
 
 # Rebuild the .ico from the repository-safe Base64 source before every publish.
-# The source is a cloud-only, transparent, multi-size icon derived from the image
-# supplied for Claude Code Usage Monitor. Text/background are intentionally excluded so
-# the tray icon remains readable at 16/20/24/32 px.
+# Original terracotta Claude-monitor artwork, with multiple sizes for EXE,
+# desktop shortcuts and the Windows notification area.
 if (-not (Test-Path $iconBase64)) {
   throw "Icon source was not found: $iconBase64"
 }
