@@ -1,0 +1,32 @@
+name: Windows widgets build
+
+on:
+  push:
+    paths:
+      - 'src/ClaudeUsageWidget/**'
+      - 'src/CodexUsageWidget/**'
+      - 'scripts/publish_claude.ps1'
+      - '.github/workflows/windows-widgets.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build Codex widget
+        run: dotnet build .\src\CodexUsageWidget\CodexUsageWidget.csproj -c Release
+      - name: Build Claude widget
+        run: dotnet build .\src\ClaudeUsageWidget\ClaudeUsageWidget.csproj -c Release
+      - name: Publish Claude standalone EXE
+        shell: pwsh
+        run: .\scripts\publish_claude.ps1
+      - name: Upload Claude executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeUsageWidget-win-x64
+          path: artifacts/claude-win-x64/
+          if-no-files-found: error
