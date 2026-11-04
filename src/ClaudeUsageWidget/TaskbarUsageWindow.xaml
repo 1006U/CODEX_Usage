@@ -14,8 +14,8 @@
         Focusable="False"
         MouseLeftButtonUp="Window_MouseLeftButtonUp">
     <Border CornerRadius="4"
-            Background="#E61A1C20"
-            BorderBrush="#332E3B4B"
+            Background="#FFD97757"
+            BorderBrush="#FFAA4B30"
             BorderThickness="1"
             Padding="10,5"
             Cursor="Hand">
@@ -29,7 +29,7 @@
             <Border Grid.Column="0"
                     Width="3"
                     CornerRadius="2"
-                    Background="#FFE6A078" />
+                    Background="#FF46241B" />
 
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
@@ -39,21 +39,21 @@
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="CLAUDE"
-                               Foreground="#FFE6ECF3"
+                               Foreground="#FF241811"
                                FontSize="11"
                                FontWeight="SemiBold" />
                     <TextBlock x:Name="FiveHourText"
                                Text="  --%"
-                               Foreground="#FFF8FAFC"
+                               Foreground="#FF241811"
                                FontSize="11"
                                FontWeight="Bold" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,0">
-                    <TextBlock Text="5H " Foreground="#FF7D8B9E" FontSize="9" />
-                    <TextBlock x:Name="FiveHourSmallText" Text="--%" Foreground="#FFE6A078" FontSize="9" FontWeight="SemiBold" />
-                    <TextBlock Text="  ·  WRU " Foreground="#FF7D8B9E" FontSize="9" />
-                    <TextBlock x:Name="WeeklyText" Text="--%" Foreground="#FFB19CFF" FontSize="9" FontWeight="SemiBold" />
+                    <TextBlock Text="5H " Foreground="#FF351D16" FontSize="10" FontWeight="Medium" />
+                    <TextBlock x:Name="FiveHourSmallText" Text="--%" Foreground="#FF46241B" FontSize="10" FontWeight="SemiBold" />
+                    <TextBlock Text="  ·  WRU " Foreground="#FF351D16" FontSize="10" FontWeight="Medium" />
+                    <TextBlock x:Name="WeeklyText" Text="--%" Foreground="#FF46241B" FontSize="10" FontWeight="SemiBold" />
                 </StackPanel>
             </Grid>
         </Grid>
