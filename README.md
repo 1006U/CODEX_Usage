@@ -1,5 +1,7 @@
 # Codex Usage Monitor
 
+**Claude Code companion:** [Claude Code Usage Monitor (Windows)](CLAUDE_WIDGET.md) — an independent EXE with its own taskbar tile, tray icon, and 5-hour/weekly Claude usage. It can run alongside the Codex widget. The Claude version was informed by [INNO-HI/ClaudeUsageWidget](https://github.com/INNO-HI/ClaudeUsageWidget).
+
 Windows desktop widget for monitoring the remaining Codex subscription usage without opening the ChatGPT/Codex usage screen.
 
 The design is inspired by the workflow of Claude usage widgets: keep a tiny always-on-top monitor visible, poll only usage/rate-limit information, and never send model prompts just to check quota.
